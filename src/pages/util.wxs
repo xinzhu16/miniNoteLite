@@ -1,0 +1,13 @@
+var dateToString = function (date, type) {
+  var time = getDate(date);
+  switch (type) {
+    case 1:
+      return time.getDate() + '/' + (time.getMonth() + 1)%12 + '/' + time.getFullYear();
+    case 2:
+      return (time.getMonth() + 1)%12 + '月' + time.getDate() + '日 ' + time.getHours() + ':' + time.getMinutes();
+    default:
+      return time.getDate() + '/' + (time.getMonth() + 1)%12 + '/' + time.getFullYear()
+  }
+}
+
+module.exports.dateToString = dateToString;

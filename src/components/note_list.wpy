@@ -1,0 +1,47 @@
+<style lang="less">
+  .mylist:odd {
+    color: red;
+  }
+  .mylist:even {
+    color: green;
+  }
+</style>
+<template>
+  <view class="note_list">
+
+  </view>
+</template>
+<script>
+  import wepy from 'wepy'
+
+  export default class List extends wepy.component {
+    props = {
+      noteArr: {
+        type: Array,
+        default: [
+          {
+            id: '0',
+            title: 'loading33'
+          }
+        ]
+      }
+    }
+
+    events = {
+      'index-broadcast': (...args) => {
+        let $event = args[args.length - 1]
+        console.log(`${this.$name} receive ${$event.name} from ${$event.source.name}`)
+      }
+    }
+
+    methods = {
+      tap () {
+        // this.num = this.num + 1
+        console.log(this.$name + ' tap')
+      }
+    }
+
+    onLoad () {
+    }
+  }
+</script>

@@ -1,0 +1,145 @@
+<style lang="less">
+  .header {
+    width: 700rpx;
+    display: flex;
+    justify-content: space-between;
+  }
+  .endTimeTip {
+    position: fixed;
+    right: 20px;
+    bottom: 50px;
+    border: 1px solid bisque;
+  }
+  .footer {
+    position: fixed;
+    display: flex;
+    bottom: 0;
+    width: 100%;
+    height: 40px;
+    border-top: 1px solid black;
+    line-height: 40px;
+    view {
+      flex: 1;
+      text-align: center;
+    }
+  }
+</style>
+<template>
+  <wxs src="./util.wxs" module="util" />
+  <view class="container">
+    <view class="header">
+      <picker bindchange="classPickerChange" range="{{classArr}}" range-key="desc">
+        <view>分类</view>
+      </picker>
+      <view class="save" @tap="handleSaveClick">保存</view>
+    </view>
+    <view class="title" slot="title">{{util.dateToString(beginDate, 2)}}</view>
+    <textarea maxlength="-1" auto-height bindinput="handleInput" value="{{inputValue}}" placeholder="请输入内容" auto-focus></textarea>
+    <picker bindchange="endDatePickerChange" value=2 range="{{endDateArr}}" range-key="desc">
+      <view class="endTimeTip">{{displayEndTimer}}</view>
+    </picker>
+    <view class="footer">
+      <view>分享</view>
+      <view @tap="handleDeleteBtn">删除</view>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import {CLASS_ARR, Note} from "../common/constant";
+  import ajax from '../util/ajax';
+  import API from '../common/API';
+  import {addDate, dateToString} from "../util";
+
+  let tempNote;
+  const NOW_DATE = new Date().getTime();
+  const END_DATE_MAP = [{
+    desc: '一天后删除',
+    addDay: 1
+  },{
+    desc: '三天后删除',
+    addDay: 3
+  },{
+    desc: '一周后删除',
+    addDay: 7
+  },{
+    desc: '一月后删除',
+    addDay: 30
+  },{
+    desc: '三个月后删除',
+    addDay: 90
+  }]
+  export default class NoteDetail extends wepy.page {
+    config = {
+      navigationBarTitleText: '编辑页-便签助手'
+    }
+
+    components = {
+    }
+
+    data = {
+      classArr: CLASS_ARR,
+      beginDate: NOW_DATE,
+      isEdit: false,
+      endDate: addDate(NOW_DATE, 7),
+      displayEndTimer: '一周后删除',
+      inputValue: null,
+      endDateArr: END_DATE_MAP
+    }
+
+    endDatePickerChange(e) {
+      tempNote.endDate = addDate(NOW_DATE, END_DATE_MAP[e.detail.value].addDay)
+      this.displayEndTimer = END_DATE_MAP[e.detail.value].desc;
+    }
+
+    classPickerChange(e) {
+      tempNote.type = CLASS_ARR[e.detail.value].type
+    }
+
+    computed = {
+    }
+
+    methods = {
+      async handleSaveClick() {
+        if (this.isEdit) {
+          await ajax(API.EDIT, tempNote)
+        } else {
+          await ajax(API.ADD, tempNote)
+        }
+        wx.reLaunch({
+          url: '/pages/index'
+        })
+      },
+      handleInput(e) {
+        tempNote.content = e.detail.value;
+      },
+      async handleDeleteBtn() {
+        if (this.isEdit) {
+          await ajax(API.EDIT, Object.assign(tempNote, {state: 'del'}))
+        }
+        wx.reLaunch({
+          url: '/pages/index'
+        })
+      }
+    }
+
+    events = {
+    }
+
+    onLoad(option) {
+      if (option.note) {
+        const note = JSON.parse(option.note);
+        this.isEdit = true;
+        this.inputValue = note.content;
+        this.beginDate = note.beginDate;
+        this.endDate = note.endDate;
+        this.displayEndTimer = `${dateToString(note.endDate, 2)}删除`;
+        tempNote = note;
+      } else {
+        this.isEdit = false;
+        tempNote = new Note(this.beginDate, this.endDate)
+      }
+    }
+  }
+</script>

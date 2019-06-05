@@ -1,0 +1,247 @@
+<style lang="less">
+  .mylist {
+    width: 700rpx;
+    height: 50px;
+    margin-top: 10px;
+    padding-left: 20rpx;
+    .content {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .date {
+      margin-top: 10px;
+      font-size: 13px;
+    }
+  }
+  .note-add {
+    z-index: 10;
+    position: fixed;
+    right: 15px;
+    bottom: 15px;
+    width: 30px;
+    height: 30px;
+    font-size: 29px;
+    line-height: 26px;
+    text-align: center;
+    background: black;
+    color: white;
+    border-radius: 100%;
+  }
+  header {
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    padding: 0 10px;
+    justify-content: space-between;
+    .search-img {
+      width: 20px;
+      height: 20px;
+    }
+    .note-type {
+      position: relative;
+      padding-right: 15px;
+      &:after {
+        content: '';
+        position: absolute;
+        top: 8px;
+        margin-left: 5px;
+        width: 0;
+        height: 0;
+        border: 8px solid transparent;
+        border-top: 8px black solid;
+      }
+    }
+    .search-more-box {
+      display: flex;
+      .more {
+        display: flex;
+        height: 21px;
+        width: 20px;
+        padding-left: 5px;
+        margin-left: 5px;
+        flex-wrap: wrap;
+        align-content: space-around;
+        .line {
+          width: 100%;
+          height: 3px;
+          background: black;
+        }
+      }
+    }
+  }
+  .footer {
+    position: fixed;
+    display: flex;
+    bottom: 0;
+    width: 100%;
+    height: 40px;
+    border-top: 1px solid black;
+    line-height: 40px;
+    view {
+      flex: 1;
+      text-align: center;
+    }
+  }
+
+</style>
+<template>
+  <wxs src="./util.wxs" module="util" />
+  <view class="container">
+    <header>
+      <picker bindchange="classPickerChange" value="{{typeIndex}}" range="{{classArr}}" range-key="desc">
+        <view class="note-type">{{classArr[typeIndex].desc}}</view>
+      </picker>
+      <view class="search-more-box">
+        <image src="../img/search.png" class="search-img">搜索</image>
+        <picker bindchange="morePickerChange" value="{{moreIndex}}" range="{{moreArr}}" range-key="desc">
+          <view class="more"><view class="line"></view><view class="line"></view><view class="line"></view></view>
+        </picker>
+      </view>
+    </header>
+    <block wx:for-items="{{noteArr}}" wx:for-index="index" wx:for-item="item" wx:key="id">
+      <view @tap="handleNoteClick" style="background-color:{{typeToColor[item.type]}}" class="mylist" data-index="{{index}}">
+        <view class="content">{{item.content}}</view>
+        <view class="date">
+          <text>{{util.dateToString(item.beginDate, 1)}} -  {{util.dateToString(item.endDate, 1)}}</text>
+        </view>
+      </view>
+    </block>
+    <view>
+      <view @tap="addNote" class="note-add">+</view>
+    </view>
+    <!--<view class="footer">
+      <view>
+
+      </view>
+
+      <view>
+        <picker bindchange="sortPickerChange" range="{{sortArr}}" range-key="desc">
+          <view>排序</view>
+        </picker>
+      </view>
+    </view>-->
+    <toast />
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import Toast from 'wepy-com-toast'
+  import {CLASS_ARR, TYPE_TO_COLOR_MAP, NOTE_TYPE, MORE_ARR, MORE_TYPE} from '../common/constant';
+  import ajax from '../util/ajax';
+  import API from '../common/API';
+
+  let NOTE_LIST = [];
+  export default class Index extends wepy.page {
+    config = {
+      navigationBarTitleText: '首页-便签助手'
+    }
+    components = {
+      toast: Toast
+    }
+
+    data = {
+      sortArr: [{
+        desc: '开始时间正序'
+      }, {
+        desc: '开始时间倒序'
+      }, {
+        desc: '结束时间正序'
+      }, {
+        desc: '结束时间倒序'
+      }],
+      noteArr: [],
+      classArr: CLASS_ARR,
+      typeToColor: TYPE_TO_COLOR_MAP,
+      typeIndex: 3,
+      moreIndex: 1,
+      moreArr: MORE_ARR
+    }
+    computed = {}
+
+    classPickerChange(e) {
+      if (CLASS_ARR[e.detail.value].type === NOTE_TYPE.L4) {
+        this.noteArr = NOTE_LIST;
+        return;
+      }
+      this.typeIndex = e.detail.value;
+      this.noteArr = NOTE_LIST.filter(function (item) {
+        return item.type === CLASS_ARR[e.detail.value].type;
+      })
+    }
+
+    async morePickerChange(e) {
+      let resp;
+      switch (MORE_ARR[e.detail.value].type) {
+        case MORE_TYPE.DUSTBIN:
+          resp = await ajax(API.GET_DEL);
+          break;
+        case MORE_TYPE.HOME:
+          resp = await ajax(API.GET_VALID);
+          break;
+      }
+      this.noteArr = resp.result.data;
+      NOTE_LIST = resp.result.data;
+      this.$apply();
+    }
+
+    sortPickerChange(e) {
+      switch (e.detail.value) {
+        case '0':
+          this.noteArr = this.noteArr.sort(function (a, b) {
+            return new Date(b.beginDate).getTime() - new Date(a.beginDate).getTime();
+          });
+          break;
+        case '1':
+          this.noteArr = this.noteArr.sort(function (a, b) {
+            return new Date(a.beginDate).getTime() - new Date(b.beginDate).getTime();
+          });
+          break;
+        case '2':
+          this.noteArr = this.noteArr.sort(function (a, b) {
+            return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+          });
+          break;
+        default:
+          this.noteArr = this.noteArr.sort(function (a, b) {
+            return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
+          });
+          break;
+      }
+    }
+
+    methods = {
+      addNote: () => {
+        wx.navigateTo({
+          url: '/pages/noteDetail'
+        })
+      },
+      handleNoteClick(e) {
+        console.log(e);
+        wx.navigateTo({
+          url: `/pages/noteDetail?note=${JSON.stringify(this.noteArr[e.currentTarget.dataset.index])}`
+        })
+      }
+    }
+
+    events = {
+    }
+
+    async onLoad() {
+      wx.cloud.init({
+        env: 'test-h94bc'
+        // env: 'release-gisqy'
+      });
+
+      const resp = await ajax(API.GET_VALID)
+      console.log(resp);
+      this.noteArr = resp.result.data;
+      NOTE_LIST = resp.result.data;
+      // wx.navigateTo({
+      //   url: '/pages/noteDetail'
+      // })
+      this.$apply();
+    }
+  }
+</script>
